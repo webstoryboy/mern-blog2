@@ -8,6 +8,8 @@ export default function CommentSection({ postId }) {
     const [comment, setComment] = useState("");
     const [commentError, setCommentError] = useState(null);
     const [comments, setComments] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [commentToDelete, setCommentToDelete] = useState(null);
 
     const navigate = useNavigate();
 
@@ -87,8 +89,27 @@ export default function CommentSection({ postId }) {
         setComments(comments.map((c) => (c._id === comment._id ? { ...c, content: editedContent } : c)));
     };
 
+    const handleDelete = async (commentId) => {
+        setShowModal(false);
+        try {
+            if (!currentUser) {
+                navigate("/sign-in");
+                return;
+            }
+            const res = await fetch(`/api/comment/deletecomment/${commentId}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setComments(comments.filter((comment) => comment._id !== commentId));
+            }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
+
     return (
-        <div className="w-full max-w-2xl p-3 mx-auto">
+        <div className="relative w-full max-w-2xl p-3 mx-auto">
             {currentUser ? (
                 <div className="flex items-center gap-1 my-5 text-sm text-gray-500">
                     <p>Signed in as:</p>
@@ -135,9 +156,33 @@ export default function CommentSection({ postId }) {
                         </div>
                     </div>
                     {comments.map((comment) => (
-                        <Comment key={comment._id} comment={comment} onLike={handleLike} onEdit={handleEdit} />
+                        <Comment
+                            key={comment._id}
+                            comment={comment}
+                            onLike={handleLike}
+                            onEdit={handleEdit}
+                            onDelete={(commentId) => {
+                                setShowModal(true);
+                                setCommentToDelete(commentId);
+                            }}
+                        />
                     ))}
                 </>
+            )}
+
+            {showModal && (
+                <div className="absolute p-4 bg-white border top-4 left-4">
+                    <h3>정말로 삭제하겠습니까?</h3>
+                    <button
+                        className="block p-2 mb-2 text-white bg-red-500"
+                        onClick={() => handleDelete(commentToDelete)}
+                    >
+                        Yes
+                    </button>
+                    <button className="block p-2 bg-gray-300" onClick={() => setShowModal(false)}>
+                        No
+                    </button>
+                </div>
             )}
         </div>
     );
